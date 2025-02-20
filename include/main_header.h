@@ -7,9 +7,9 @@
 
 #define INIT_WIDTH 1000
 #define INIT_HEIGHT 600
-#define INIT_FPS 60
-#define player1_x 10
-#define player2_x INIT_WIDTH - 10
+#define INIT_FPS 165
+#define player1_x 30
+#define player2_x INIT_WIDTH - player1_x
 #define player_length 100
 #define player_width 10
 #define ball_pos_x INIT_WIDTH / 2
@@ -37,6 +37,8 @@ typedef struct
 	Vector2 start;
 	Vector2 end;
 	float thickness;
+	i16 up_control;
+	i16 down_control;
 }Player;
 
 typedef struct
@@ -55,18 +57,18 @@ void updatePlayers(Player* player1, Player* player2);
 void updateBall(Ball* ball);
 void renderPlayers(Player* player1, Player* player2);
 void renderBall(Ball* ball);
-
+void updatePlayerInput(Player* player);
 
 // ----------------------- struct Functions -----------------------------
 
 Button_array* InitButtonArray();
-Player* createPlayer(Vector2 start, Vector2 end, float thickness);
+Player* createPlayer(Vector2 start, Vector2 end, float thickness, i16 up_control, i16 down_control);
 Ball* createBall(Vector2 pos, u8 radius);
 
 // ----------------------- variable Functions ------------------------------------
 
 u8 hoverMouse(Button* button);
-i32 getKeyInput();
+float updateDT();
 
 // ----------------------- definitions -------------------------------------
 
@@ -84,8 +86,8 @@ void mainLoop()
 	//Button_array* b_array = InitButtonArray();
 	//NewButton(&b_array, (Vector2){100, 100}, (Vector2){100, 50}, WHITE, "nigger", 10);
 
-	Player* player1 = createPlayer((Vector2){player1_x, 250}, (Vector2){player1_x, 350}, player_width);
-	Player* player2 = createPlayer((Vector2){player2_x, 250}, (Vector2){player2_x, 350}, player_width);
+	Player* player1 = createPlayer((Vector2){player1_x, 250}, (Vector2){player1_x, 350}, player_width, KEY_W, KEY_S);
+	Player* player2 = createPlayer((Vector2){player2_x, 250}, (Vector2){player2_x, 350}, player_width, KEY_UP, KEY_DOWN);
 
 	Ball* ball = createBall((Vector2){ball_pos_x, ball_pos_y}, 5);
 
@@ -159,12 +161,14 @@ void RenderButton(Button* data)
 	DrawText(data->text, text_pos_x, text_pos_y, data->font_size, RED);
 }
 
-Player* createPlayer(Vector2 start, Vector2 end, float thicknesss)
+Player* createPlayer(Vector2 start, Vector2 end, float thickness, i16 up_control, i16 down_control)
 {
 	Player* player = (Player*)malloc(sizeof(Player));
-	player->thickness = 10;
+	player->thickness = thickness;
 	player->start = start;
-	player->start = end;
+	player->end = end;
+	player->up_control = up_control;
+	player->down_control = down_control;
 
 	return player;
 }
@@ -178,60 +182,44 @@ Ball* createBall(Vector2 pos, u8 radius)
 	return ball;
 }
 
-void updatePlayers(Player* player1, Player* player2)
+void updatePlayerInput(Player* player)
 {
-	i32 input = getKeyInput();
+	float dt = GetFrameTime();
 
-	switch(input)
+	if(IsKeyDown(player->up_control))
 	{
-	case KEY_W:
-		player1->start.y += 5;
-		player1->end.y += 5;
-		break;
-	case KEY_S:
-		player1->start.y -= 5;
-		player1->end.y -= 5;
-		break;
-	case KEY_UP:
-		player2->start.y += 5;
-		player2->end.y += 5;
-		break;
-	case KEY_DOWN:
-		player2->start.y -= 5;
-		player2->end.y -= 5;
-		break;
-	case KEY_SPACE:
-		// start / end game
-		break;
-	default:
-		break;
+		if(player->start.y <= 1)
+			player->start.y == 1;
+		else
+		{
+			player->start.y -= 200 * dt;
+			player->end.y -= 200  * dt;
+		}
 	}
 
-	renderPlayers(player1, player2);
+	if(IsKeyDown(player->down_control))
+	{
+		if(player->end.y >= INIT_HEIGHT - 1)
+			player->end.y == INIT_HEIGHT - 1;
+		else
+		{
+			player->start.y += 200 * dt;
+			player->end.y += 200 * dt;
+		}
+	}
+}
 
+void updatePlayers(Player* player1, Player* player2)
+{
+	updatePlayerInput(player1);
+	updatePlayerInput(player2);
+
+	renderPlayers(player1, player2);
 }
 
 void updateBall(Ball* ball)
 {
 	renderBall(ball);
-}
-
-i32 getKeyInput()
-{
-	if(IsKeyPressed(KEY_W))
-		return KEY_W;
-
-	if(IsKeyPressed(KEY_S))
-		return KEY_S;
-
-	if(IsKeyPressed(KEY_UP))
-		return KEY_UP;
-
-	if(IsKeyPressed(KEY_DOWN))
-		return KEY_DOWN;
-
-	if(IsKeyPressed(KEY_SPACE))
-		return KEY_SPACE;
 }
 
 void renderPlayers(Player* player1, Player* player2)
